@@ -3,11 +3,18 @@
 require_once 'db.php';
 
 // 対象日付の決定
+// URLから日付を取り出し、日付の形式が正しいかチェック
 $target_date = isset($_GET['date']) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $_GET['date'])
-    ? $_GET['date']
-    : date('Y-m-d');
+    ? $_GET['date']     // 正しい日付ならその日付を
+    : date('Y-m-d');    // なければサーバーの今日の日付
 
+// 今日の日付かを判定
 $is_today = ($target_date === date('Y-m-d'));
+
+// 曜日の計算
+$week_days = ['日', '月', '火', '水', '木', '金', '土'];
+// 該当日の日付から曜日番号を取得（日=0, 月=1, …)
+$target_w = $week_days[date('w', strtotime($target_date))];
 
 try {
     // 生徒一覧の取得（学科名も結合して取得)
@@ -40,6 +47,34 @@ try {
         ORDER BY teacher_id ASC
     ");
     $teachers = $stmtTeachers->fetchAll();
+
+    // その日の出欠データDBから探す
+    $stmtAttendance = $pdo->prepare("
+        SELECT student_id, period, subject_id, teacher_id, attendance_status_id
+        FROM attendance
+        WHERE attendance_date = :att_date
+    ");
+    $stmtAttendance -> execute(['att_date' => $target_date]);
+    $saved_records = $stmtAttendance->fetchAll();
+
+    // 整理用の箱を用意
+    $existing_attendance = [];  // 生徒の出欠を入れる箱
+    $existing_period = [];      // 時限の科目・教員を入れる箱
+
+    // DBからとれたデータを箱に入れる
+    foreach($saved_records as $rec) {
+        // ”学籍番号_時限”をキーにして、ステータスを記憶
+        $key = "{$rec['student_id']}_{$rec['period']}";
+        $existing_attendance[$key] = $rec['attendance_status_id'];
+
+        // その時の科目と教員を記録
+        if (!isset($existing_periods[$rec['period']])) {
+            $existing_periods[$rec['period']] = [
+                'subject_id' => $rec['subject_id'],
+                'teacher_id' => $rec['teacher_id']
+            ];  
+        }
+    }
 
 } catch (PDOException $e) {
     die('データ取得エラー: ' .htmlspecialchars($e->getMessage(), ENT_QUOTES,'UTF-8')) ;
@@ -87,7 +122,7 @@ $max_period = 7;
         <!-- 日付選択コントローラー -->
         <div class="date-controller">
             <span class="data-display-label">対象日</span>
-            <div class="datepicker-box">
+            <div class="date-picker-box">
                 <!-- カレンダーSVGアイコン -->
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
                     <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
@@ -111,6 +146,13 @@ $max_period = 7;
                     <th>班</th>
                     <!-- 1～7限のヘッダーをループで生成 -->
                     <?php for ($p = 1; $p <= $max_period; $p++): ?>
+                        
+                        <?php
+                        // 既存の科目。教員選択があれば初期値にする
+                        $saved_subj = $existing_periods[$p]['subject_id'] ?? '';
+                        $saved_teach = $existing_periods[$p]['teacher_id'] ?? '';
+                        ?>
+
                         <th class="period-header">
                             <div><?= $p ?>限</div>
 
@@ -146,8 +188,14 @@ $max_period = 7;
 
                         <!-- 生徒ごとに各時限のマス目を作成 -->
                          <?php for ($p = 1; $p <= $max_period; $p++): ?>
+                            <?php
+                                $key = "{$st['student_id']}_{$p}" ;
+                                // 既存レコードがあればそのステータス、なければnull
+                                $curr_status = $existing_attendance[$key] ?? null;
+
+                            ?>
                             <!-- セル自体にも目印IDを付与 -->
-                            <td id="cell_<?= $st['student_id'] ?>_<?= $p ?>">
+                            <td id="cell_<?= $st['student_id'] ?>_<?= $p ?>">   <!-- ここから続き -->
                                 <div class="radio-group">
                                     <!-- name属性を「att_学籍番号_時限」にすることでマス目ごとに独立した1つの選択肢グループになる -->
                                     <!-- クリックされたらmarkAsChanged()を呼び出す -->

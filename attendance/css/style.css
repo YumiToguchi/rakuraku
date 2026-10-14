@@ -217,3 +217,51 @@ th {
   box-shadow: 0 6px 18px rgba(52, 58, 64, 0.35);
   transform: translateY(-2px);
 }
+
+.date-controller {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background-color: var(--color-bg-card);
+  padding: 12px 20px;
+  border-radius: 8px;
+  box-shadow: 0 1px 4px rgb(52, 58, 64, 0.08);
+  margin-bottom: 20px;
+  max-width: fit-content;
+}
+
+.date-display-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-text-sub);
+}
+
+.date-picker-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: var(--color-header-bg);
+  border: 1px solid var(--color-border-control);
+  padding: 6px 12px;
+  border-radius: 6px;
+}
+
+.date-input {
+  border: none;
+  background: transparent;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-primary);
+  cursor: pointer;
+  outline: none;
+  font-family: inherit;
+}
+
+.today-badge {
+  font-size: 0.75rem;
+  background-color: var(--color-accent);
+  color: var(--color-primary);
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-weight: bold;
+}

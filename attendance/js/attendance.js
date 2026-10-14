@@ -112,3 +112,21 @@ function submitAttendance() {
       `未入力者なし、変更されたデータのみを抽出しました。`,
   );
 }
+
+function changeDate(newDate) {
+  if (newDate) {
+    // 未保存のマス目があれば確認を出す
+    if (changedItems.size > 0) {
+      if (
+        !confirm(
+          "保存されていない変更があります。破棄して別の日付へ移動しますか？",
+        )
+      ) {
+        location.reload();
+        return;
+      }
+    }
+    // 選ばれた日付のURLへジャンプする
+    location.href = `input.php?date=${newDate}`;
+  }
+}
