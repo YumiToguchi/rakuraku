@@ -1,3 +1,60 @@
+<?php 
+session_start();
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+
+//ログイン認証成功後を想定
+unset($_SESSION['user']);
+
+    $pdo=new PDO('mysql:host=localhost;dbname=attendance_db;charset=utf8', 'staff', 'password');
+
+    $sql=$pdo->prepare('
+     SELECT users.*, usertype.usertype_name 
+     FROM users JOIN usertype 
+        ON users.usertype_id = usertype.usertype_id
+     WHERE users.login_id = ? AND users.password = ?
+     ');
+
+    $sql->execute([
+    $_POST['login'] ?? '',
+    $_POST['password'] ?? ''
+    ]);
+
+    $row = $sql->fetch(PDO::FETCH_ASSOC);
+
+    
+    if ($row) {
+        $_SESSION['user'] = [
+            'user_id' => $row['user_id'],
+            'usertype_id' => $row['usertype_id'],
+            'usertype_name' => $row['usertype_name'],
+            'login_id' => $row['login_id']
+    ];
+
+    if ($row['usertype_id'] == 1) {
+        header('Location: input.php');
+        exit;
+    } elseif ($row['usertype_id'] == 2) {
+        echo '<script>
+        alert("管理者TOPはまだ作成されていません。");
+        location.href = "login-input.php";
+        </script>';
+        exit;
+    } elseif ($row['usertype_id'] == 3) {
+        echo '<script>
+            alert("生徒TOP画面はまだ作成されていません。");
+            location.href = "login-input.php";
+        </script>';
+        exit;
+    }
+    } else {
+        $error = 'ログインIDまたはパスワードが正しくありません。';
+    }
+    }
+    
+?>
+
+
 <?php
 // データベース接続
 require_once 'db.php';
@@ -66,7 +123,12 @@ require_once 'db.php';
             <h1>ログイン</h1>
             
         </div>
-        <form action="input.php" method="post">
+        <?php if (isset($error)): ?>
+        <p class="error">
+            <?= htmlspecialchars($error, ENT_QUOTES, 'UTF-8') ?>
+        </p>
+        <?php endif; ?>
+        <form action="login-input.php" method="post">
             <p>ログインID<br><input type="text" name="login"></p><br>
             <p>パスワード<br><input type="password" name="password"></p><br>
             <input type="submit" value="ログイン" class="submit-btn">
